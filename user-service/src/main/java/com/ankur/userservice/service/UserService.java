@@ -39,7 +39,7 @@ public class UserService {
                 .build();
 
         User saved = userRepository.save(user);
-        log.info("User is registered successfully wiht id: {}", saved.getId());
+        log.info("User is registered successfully with id: {}", saved.getId());
         return toResponse(saved);
     }
 
