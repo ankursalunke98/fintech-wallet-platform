@@ -8,3 +8,5 @@ INTERVIEW-ANSWERS.md
 # IntelliJ project metadata
 .idea/
 *.iml
+.DS_Store
+**/.DS_Store
