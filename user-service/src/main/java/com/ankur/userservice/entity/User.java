@@ -2,8 +2,12 @@ package com.ankur.userservice.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.OffsetDateTime;
+import java.util.Collection;
+import java.util.List;
 
 @Entity
 @Table(name = "users")
@@ -12,7 +16,7 @@ import java.time.OffsetDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class User {
+public class User implements UserDetails {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -49,4 +53,38 @@ public class User {
     }
 
 
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return List.of(); // no roles for now, empty list
+    }
+
+    @Override
+    public String getPassword() {
+        return passwordHash; // Spring Security needs this to verify BCrypt
+    }
+
+    @Override
+    public String getUsername() {
+        return email; // we use email as the unique identifier
+    }
+
+    @Override
+    public boolean isAccountNonExpired() {
+        return true; // not implementing account expiry for now
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return true; // not implementing account locking for now
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true; // not implementing credential expiry for now
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return isActive; // use your existing isActive field
+    }
 }
