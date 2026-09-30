@@ -42,38 +42,46 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         // Step 3: Strip "Bearer " prefix (7 characters) to get raw token
         String token = header.substring(7);
 
-        // Step 4: Extract username FROM THE TOKEN using JwtService
-        String username = jwtService.extractUsername(token);
+        try {
+            // Step 4: Extract username FROM THE TOKEN using JwtService
+            String username = jwtService.extractUsername(token);
 
-        // Step 5: If username found AND nobody authenticated yet this request
-        if (username != null &&
-                SecurityContextHolder.getContext().getAuthentication() == null) {
+            // Step 5: If username found AND nobody authenticated yet this request
+            if (username != null &&
+                    SecurityContextHolder.getContext().getAuthentication() == null) {
 
-            // Load user from DB
-            UserDetails userDetails =
-                    userDetailsService.loadUserByUsername(username);
+                // Load user from DB
+                UserDetails userDetails =
+                        userDetailsService.loadUserByUsername(username);
 
-            // Validate token against user
-            if (jwtService.isTokenValid(token, userDetails)) {
+                // Validate token against user
+                if (jwtService.isTokenValid(token, userDetails)) {
 
-                // Create authentication object
-                UsernamePasswordAuthenticationToken authToken =
-                        new UsernamePasswordAuthenticationToken(
-                                userDetails,
-                                null,
-                                userDetails.getAuthorities()
-                        );
+                    // Create authentication object
+                    UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails,
+                                    null,
+                                    userDetails.getAuthorities()
+                            );
 
-                // Add request details to auth token
-                authToken.setDetails(
-                        new WebAuthenticationDetailsSource()
-                                .buildDetails(request)
-                );
+                    // Add request details to auth token
+                    authToken.setDetails(
+                            new WebAuthenticationDetailsSource()
+                                    .buildDetails(request)
+                    );
 
-                // Set in SecurityContext — marks this request as authenticated
-                SecurityContextHolder.getContext()
-                        .setAuthentication(authToken);
+                    // Set in SecurityContext — marks this request as authenticated
+                    SecurityContextHolder.getContext()
+                            .setAuthentication(authToken);
+                }
             }
+        } catch (io.jsonwebtoken.JwtException | IllegalArgumentException e) {
+            // Bad token (expired, malformed, tampered signature, or empty).
+            // Don't crash: leave the SecurityContext unauthenticated and let
+            // Spring Security's access rules reject the request. (Currently a 403,
+            // because no AuthenticationEntryPoint is configured yet.)
+            logger.warn("JWT validation failed: " + e.getMessage());
         }
 
         // Step 6: Always continue the filter chain
