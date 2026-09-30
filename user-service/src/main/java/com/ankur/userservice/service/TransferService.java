@@ -58,7 +58,7 @@ public class TransferService {
 
         // Both accounts must exist before we touch the ledger
         // (orElseThrow gives us a 404 via GlobalExceptionHandler)
-        Account fromAccount = accountRepository.findById(request.getFromAccountId())
+        Account fromAccount = accountRepository.findByIdForTransfer(request.getFromAccountId())
                 .orElseThrow(() -> new AccountNotFoundException(request.getFromAccountId()));
         Account toAccount = accountRepository.findById(request.getToAccountId())
                 .orElseThrow(() -> new AccountNotFoundException(request.getToAccountId()));
@@ -102,13 +102,6 @@ public class TransferService {
         List<LedgerEntry> entries = List.of(debitEntry, creditEntry);
         validateTransferIntegrity(transaction, entries);
 
-        // Re-saving forces Hibernate to bump @Version on both accounts
-        accountRepository.save(fromAccount);
-
-        // Re-saving forces Hibernate to bump @Version on both accounts.
-        // Throws OptimisticLockException if another transfer raced us here.
-        accountRepository.save(fromAccount);
-        accountRepository.save(toAccount);
 
         log.info("Transfer complete: transactionRef={}", transaction.getTransactionRef());
 
