@@ -1,8 +1,6 @@
 package com.ankur.userservice.controller;
 
-import com.ankur.userservice.dto.BalanceResponse;
-import com.ankur.userservice.dto.CreateWalletRequest;
-import com.ankur.userservice.dto.WalletResponse;
+import com.ankur.userservice.dto.*;
 import com.ankur.userservice.service.WalletService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +21,12 @@ public class WalletController {
         log.info("Received createWallet request for user_id: {} ", request.getUserId());
         WalletResponse response = walletService.createWallet(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/{accountId}/deposit")
+    public ResponseEntity<DepositResponse> depositAmount(@PathVariable Long accountId, @Valid @RequestBody DepositRequest request){
+        log.info("Received a deposit request for Account: {}", accountId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(walletService.deposit(accountId, request.getAmount()));
     }
 
     @GetMapping("/{accountId}/balance")

@@ -1,9 +1,11 @@
 package com.ankur.userservice.service;
 import com.ankur.userservice.dto.BalanceResponse;
 import com.ankur.userservice.dto.CreateWalletRequest;
+import com.ankur.userservice.dto.DepositResponse;
 import com.ankur.userservice.dto.WalletResponse;
 import com.ankur.userservice.entity.*;
 import com.ankur.userservice.exception.AccountNotFoundException;
+import com.ankur.userservice.exception.InvalidAmountException;
 import com.ankur.userservice.exception.UserNotFoundException;
 import com.ankur.userservice.repository.AccountRepository;
 import com.ankur.userservice.repository.LedgerEntryRepository;
@@ -56,6 +58,57 @@ public class WalletService {
                 .currency(userAccount.getCurrency())
                 .balance(balance)
                 .createdAt(userAccount.getCreatedAt())
+                .build();
+    }
+
+    @Transactional
+    public DepositResponse deposit(Long accountId, BigDecimal amount){
+        log.info("Making a deposit for amount: {} with Account ID: {}", amount, accountId);
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0){
+            throw new InvalidAmountException(amount);
+        }
+        if (!accountRepository.existsById(accountId)){
+            throw new AccountNotFoundException(accountId);
+        }
+        Account systemDepositAccount = getOrCreateSystemAccount(AccountType.SYSTEM_DEPOSIT);
+
+        Transaction transaction = Transaction.builder()
+                .transactionRef("TXN-" + UUID.randomUUID().toString())
+                .transactionType(TransactionType.DEPOSIT)
+                .status(TransactionStatus.COMPLETED)
+                .description("Deposit transaction created")
+                .build();
+
+        transaction = transactionRepository.save(transaction);
+
+        LedgerEntry debitEntry = LedgerEntry.builder()
+                .transactionId(transaction.getId())
+                .accountId(systemDepositAccount.getId())
+                .entryType(EntryType.DEBIT)
+                .amount(amount)
+                .currency("INR")
+                .build();
+
+        ledgerEntryRepository.save(debitEntry);
+
+        LedgerEntry creditEntry = LedgerEntry.builder()
+                .transactionId(transaction.getId())
+                .accountId(accountId)
+                .entryType(EntryType.CREDIT)
+                .amount(amount)
+                .currency("INR")
+                .build();
+
+        ledgerEntryRepository.save(creditEntry);
+        log.info("Deposit complete for Transaction: {} Debit: {} Credit: {}", transaction.getId(), systemDepositAccount.getId(), accountId);
+
+        BalanceResponse balanceResponse = getBalance(accountId);
+
+        return DepositResponse.builder()
+                .transactionRef(transaction.getTransactionRef())
+                .accountId(accountId)
+                .amount(amount)
+                .balance(balanceResponse.getBalance())
                 .build();
     }
 
